@@ -1,0 +1,142 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"></head><body><title>Schattendepot Einzelaktien</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: kompakter Depotauszug. Kontotabelle (Konto × Aktie), darunter drei kleine Kursgrafiken und die letzten Trades. */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #14181f; --muted: #5a6372; --line: #e1e5ea; --grid: #eceff3;
+  --accent: #2a78d6; --good: #0f7b3e; --bad: #c2362f; --pill: #e8eef6;
+  --display: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --surface: #181c22; --ink: #eef1f5; --muted: #a1a9b6; --line: #2a3039; --grid: #222830;
+  --accent: #3987e5; --good: #4cc27c; --bad: #ef6b63; --pill: #233042; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --surface: #181c22; --ink: #eef1f5; --muted: #a1a9b6; --line: #2a3039; --grid: #222830;
+  --accent: #3987e5; --good: #4cc27c; --bad: #ef6b63; --pill: #233042; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 32px; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { font: 700 1.4rem/1.15 var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font: 700 1rem/1.2 var(--display); margin: 0; text-wrap: balance; }
+h3 { font: 500 0.78rem/1.2 var(--body); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 8px; }
+.meta { color: var(--muted); font-size: 0.85rem; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.meta b { color: var(--ink); font-weight: 500; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--pill); font-size: 0.78rem; font-weight: 500; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.pos { color: var(--good); } .neg { color: var(--bad); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: 0; }
+.kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.kurs { font: 500 0.95rem var(--mono); margin-left: auto; color: var(--muted); }
+.zahlen { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 6px; align-items: baseline; }
+.zahlen > div { display: grid; }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.gross { font-size: 1.35rem; font-weight: 500; }
+.chf { display: block; font-size: 0.75rem; color: var(--muted); }
+#uebersicht tr:first-child td { font-weight: 500; }
+.chart { position: relative; height: 150px; margin-top: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.panelkopf { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.panelkopf h3 { margin: 0; }
+.hinweis { color: var(--muted); font-size: 0.82rem; margin: 8px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Schattendepot Einzelaktien</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <section class="panel" aria-labelledby="ueb">
+    <div class="panelkopf"><h3 id="ueb">Konten: Veränderung zum Startkapital von 1'000 CHF</h3></div>
+    <div class="scroll"><table id="uebersicht"></table></div>
+    <p class="hinweis">● investiert, ○ Cash. Enthält Kursentwicklung, Gebühren, Wechselkosten CHF→USD und die Bewegung des Dollars. Vergleich: Zeile 1 Halten.</p>
+  </section>
+
+  <div class="grid3" id="aktien"></div>
+
+  <section class="panel" aria-labelledby="tr">
+    <div class="panelkopf"><h3 id="tr">Letzte Trades</h3></div>
+    <div class="scroll"><table id="trades"></table></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = {"stand": "01.10.2026 20:44", "modus": "Probe", "usdchf": 0.8317, "intervall": "5m", "start": "01.10.2026", "letzter_lauf": "01.10. 20:44", "aktien": [{"id": "tsla", "name": "Tesla", "symbol": "TSLA", "kurs": 357.2, "tag_pct": 0.67, "start_kurs": 356.8, "seit_start_pct": 0.11, "verlauf_zeit": ["01.10. 15:30", "01.10. 15:35", "01.10. 15:40", "01.10. 15:45", "01.10. 15:50", "01.10. 15:55", "01.10. 16:00", "01.10. 16:05", "01.10. 16:10", "01.10. 16:15", "01.10. 16:20", "01.10. 16:25", "01.10. 16:30", "01.10. 16:35", "01.10. 16:40", "01.10. 16:45", "01.10. 16:50", "01.10. 16:55", "01.10. 17:00", "01.10. 17:05", "01.10. 17:10", "01.10. 17:15", "01.10. 17:20", "01.10. 17:25", "01.10. 17:30", "01.10. 17:35", "01.10. 17:40", "01.10. 17:45", "01.10. 17:50", "01.10. 17:55", "01.10. 18:00", "01.10. 18:05", "01.10. 18:10", "01.10. 18:15", "01.10. 18:20", "01.10. 18:25", "01.10. 18:30", "01.10. 18:35", "01.10. 18:40", "01.10. 18:45", "01.10. 18:50", "01.10. 18:55", "01.10. 19:00", "01.10. 19:05", "01.10. 19:10", "01.10. 19:15", "01.10. 19:20", "01.10. 19:25", "01.10. 19:30", "01.10. 19:35", "01.10. 19:40", "01.10. 19:45", "01.10. 19:50", "01.10. 19:55", "01.10. 20:00", "01.10. 20:05", "01.10. 20:10", "01.10. 20:15", "01.10. 20:20", "01.10. 20:25", "01.10. 20:30", "01.10. 20:35", "01.10. 20:40"], "verlauf_pct": [0.0, -0.33, 0.18, -0.14, -0.15, -0.26, -0.62, -0.08, -0.31, -0.39, -0.61, -0.47, -0.18, 0.25, 0.41, 0.52, 0.46, 0.59, 0.65, 0.05, 0.38, 0.3, 0.43, 0.15, -0.09, 0.01, -0.09, -0.08, 0.01, 0.17, 0.39, 0.19, -0.1, -0.23, -0.22, -0.17, -0.19, -0.33, -0.32, -0.33, -0.43, -0.41, -0.26, -0.26, -0.23, -0.2, 0.08, 0.18, 0.24, 0.13, 0.02, -0.04, -0.19, -0.24, -0.2, -0.18, 0.1, 0.19, 0.18, 0.19, 0.18, 0.03, 0.11], "konten": [{"typ": "1", "name": "Halten", "wert": 991.22, "investiert": true, "rendite": -0.88, "vs_halten": 0.0}, {"typ": "2", "name": "Nachrichten 09:00 NY (15:00 CH)", "wert": 991.22, "investiert": true, "rendite": -0.88, "vs_halten": 0.0}, {"typ": "3", "name": "Nachrichten 12:30 NY (18:30 CH)", "wert": 992.56, "investiert": true, "rendite": -0.74, "vs_halten": 1.34}, {"typ": "4", "name": "Nachrichten 15:45 NY (21:45 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 1.43}, {"typ": "5", "name": "Nachrichten 16:30 NY (22:30 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 1.43}, {"typ": "6", "name": "Ereignisgesteuert (alle 30 Min.)", "wert": 991.22, "investiert": true, "rendite": -0.88, "vs_halten": 0.0}, {"typ": "M", "name": "Quartalsregel", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 1.43}]}, {"id": "nvda", "name": "Nvidia", "symbol": "NVDA", "kurs": 231.69, "tag_pct": 1.45, "start_kurs": 230.05, "seit_start_pct": 0.71, "verlauf_zeit": ["01.10. 15:30", "01.10. 15:35", "01.10. 15:40", "01.10. 15:45", "01.10. 15:50", "01.10. 15:55", "01.10. 16:00", "01.10. 16:05", "01.10. 16:10", "01.10. 16:15", "01.10. 16:20", "01.10. 16:25", "01.10. 16:30", "01.10. 16:35", "01.10. 16:40", "01.10. 16:45", "01.10. 16:50", "01.10. 16:55", "01.10. 17:00", "01.10. 17:05", "01.10. 17:10", "01.10. 17:15", "01.10. 17:20", "01.10. 17:25", "01.10. 17:30", "01.10. 17:35", "01.10. 17:40", "01.10. 17:45", "01.10. 17:50", "01.10. 17:55", "01.10. 18:00", "01.10. 18:05", "01.10. 18:10", "01.10. 18:15", "01.10. 18:20", "01.10. 18:25", "01.10. 18:30", "01.10. 18:35", "01.10. 18:40", "01.10. 18:45", "01.10. 18:50", "01.10. 18:55", "01.10. 19:00", "01.10. 19:05", "01.10. 19:10", "01.10. 19:15", "01.10. 19:20", "01.10. 19:25", "01.10. 19:30", "01.10. 19:35", "01.10. 19:40", "01.10. 19:45", "01.10. 19:50", "01.10. 19:55", "01.10. 20:00", "01.10. 20:05", "01.10. 20:10", "01.10. 20:15", "01.10. 20:20", "01.10. 20:25", "01.10. 20:30", "01.10. 20:35", "01.10. 20:40"], "verlauf_pct": [0.0, 0.35, 0.47, 0.29, 0.69, 0.26, 0.19, 0.18, 0.03, -0.15, -0.17, -0.08, 0.13, 0.15, 0.16, 0.08, -0.12, -0.41, -0.57, -0.63, -0.3, -0.01, 0.14, 0.22, -0.12, -0.08, -0.33, -0.31, -0.4, -0.29, -0.11, -0.02, -0.04, 0.02, 0.2, 0.14, 0.45, 0.29, 0.24, 0.31, 0.08, 0.03, 0.22, 0.2, 0.21, 0.2, 0.32, 0.34, 0.35, 0.41, 0.53, 0.5, 0.35, 0.21, 0.21, 0.09, 0.23, 0.29, 0.43, 0.5, 0.79, 0.76, 0.71], "konten": [{"typ": "1", "name": "Halten", "wert": 997.62, "investiert": true, "rendite": -0.24, "vs_halten": 0.0}, {"typ": "2", "name": "Nachrichten 09:00 NY (15:00 CH)", "wert": 997.62, "investiert": true, "rendite": -0.24, "vs_halten": 0.0}, {"typ": "3", "name": "Nachrichten 12:30 NY (18:30 CH)", "wert": 994.85, "investiert": true, "rendite": -0.52, "vs_halten": -2.77}, {"typ": "4", "name": "Nachrichten 15:45 NY (21:45 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": -4.97}, {"typ": "5", "name": "Nachrichten 16:30 NY (22:30 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": -4.97}, {"typ": "6", "name": "Ereignisgesteuert (alle 30 Min.)", "wert": 997.62, "investiert": true, "rendite": -0.24, "vs_halten": 0.0}, {"typ": "M", "name": "Quartalsregel", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": -4.97}]}, {"id": "ko", "name": "Coca-Cola", "symbol": "KO", "kurs": 85.97, "tag_pct": -0.13, "start_kurs": 86.21, "seit_start_pct": -0.28, "verlauf_zeit": ["01.10. 15:30", "01.10. 15:35", "01.10. 15:40", "01.10. 15:45", "01.10. 15:50", "01.10. 15:55", "01.10. 16:00", "01.10. 16:05", "01.10. 16:10", "01.10. 16:15", "01.10. 16:20", "01.10. 16:25", "01.10. 16:30", "01.10. 16:35", "01.10. 16:40", "01.10. 16:45", "01.10. 16:50", "01.10. 16:55", "01.10. 17:00", "01.10. 17:05", "01.10. 17:10", "01.10. 17:15", "01.10. 17:20", "01.10. 17:25", "01.10. 17:30", "01.10. 17:35", "01.10. 17:40", "01.10. 17:45", "01.10. 17:50", "01.10. 17:55", "01.10. 18:00", "01.10. 18:05", "01.10. 18:10", "01.10. 18:15", "01.10. 18:20", "01.10. 18:25", "01.10. 18:30", "01.10. 18:35", "01.10. 18:40", "01.10. 18:45", "01.10. 18:50", "01.10. 18:55", "01.10. 19:00", "01.10. 19:05", "01.10. 19:10", "01.10. 19:15", "01.10. 19:20", "01.10. 19:25", "01.10. 19:30", "01.10. 19:35", "01.10. 19:40", "01.10. 19:45", "01.10. 19:50", "01.10. 19:55", "01.10. 20:00", "01.10. 20:05", "01.10. 20:10", "01.10. 20:15", "01.10. 20:20", "01.10. 20:25", "01.10. 20:30", "01.10. 20:35", "01.10. 20:40"], "verlauf_pct": [0.0, 0.0, -0.04, -0.01, -0.06, 0.13, 0.16, 0.21, 0.45, 0.38, 0.27, 0.03, 0.1, 0.16, 0.09, 0.15, 0.07, 0.18, 0.15, 0.32, 0.32, 0.39, 0.31, 0.3, 0.29, 0.39, 0.26, 0.29, 0.09, 0.02, -0.09, -0.02, -0.06, -0.02, 0.08, 0.09, -0.06, -0.09, -0.05, -0.06, -0.1, -0.09, -0.07, -0.1, -0.06, -0.03, -0.06, -0.09, -0.11, -0.33, -0.45, -0.53, -0.51, -0.41, -0.45, -0.38, -0.32, -0.26, -0.25, -0.16, -0.16, -0.3, -0.28], "konten": [{"typ": "1", "name": "Halten", "wert": 987.15, "investiert": true, "rendite": -1.29, "vs_halten": 0.0}, {"typ": "2", "name": "Nachrichten 09:00 NY (15:00 CH)", "wert": 987.15, "investiert": true, "rendite": -1.29, "vs_halten": 0.0}, {"typ": "3", "name": "Nachrichten 12:30 NY (18:30 CH)", "wert": 986.81, "investiert": true, "rendite": -1.32, "vs_halten": -0.34}, {"typ": "4", "name": "Nachrichten 15:45 NY (21:45 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 5.5}, {"typ": "5", "name": "Nachrichten 16:30 NY (22:30 CH)", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 5.5}, {"typ": "6", "name": "Ereignisgesteuert (alle 30 Min.)", "wert": 987.15, "investiert": true, "rendite": -1.29, "vs_halten": 0.0}, {"typ": "M", "name": "Quartalsregel", "wert": 992.65, "investiert": false, "rendite": -0.73, "vs_halten": 5.5}]}], "trades": [{"zeit": "01.10. 18:31", "konto": "tsla_3", "art": "KAUF", "kurs": 356.33}, {"zeit": "01.10. 18:31", "konto": "nvda_3", "art": "KAUF", "kurs": 230.59}, {"zeit": "01.10. 18:31", "konto": "ko_3", "art": "KAUF", "kurs": 86.26}, {"zeit": "01.10. 15:30", "konto": "tsla_1", "art": "KAUF", "kurs": 356.81}, {"zeit": "01.10. 15:30", "konto": "tsla_2", "art": "KAUF", "kurs": 356.81}]};
+const fmt = (v, d = 2) => v.toLocaleString("de-CH", { minimumFractionDigits: d, maximumFractionDigits: d });
+const sign = (v, d = 2) => (v > 0 ? "+" : v < 0 ? "−" : "±") + fmt(Math.abs(v), d);
+const cls = v => v > 0.005 ? "pos" : v < -0.005 ? "neg" : "";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const TYPEN = D.aktien[0].konten.map(k => [k.typ, k.name]);
+
+document.getElementById("meta").innerHTML =
+  `<span>Stand <b>${D.stand}</b></span><span class="pill">${D.modus}</span>`;
+
+// Übersicht Konto × Aktie
+let h = `<thead><tr><th>Konto</th>${D.aktien.map(a => `<th>${a.name}</th>`).join("")}</tr></thead><tbody>`;
+for (const [typ, name] of TYPEN) {
+  h += `<tr><td>${typ} ${name.replace(/ \(.*\)/, "")}</td>`;
+  for (const a of D.aktien) {
+    const k = a.konten.find(x => x.typ === typ);
+    h += `<td class="num"><span class="${cls(k.rendite)}">${k.investiert ? "●" : "○"} ${sign(k.rendite)} %</span><span class="chf">${fmt(k.wert, 0)} CHF</span></td>`;
+  }
+  h += "</tr>";
+}
+document.getElementById("uebersicht").innerHTML = h + "</tbody>";
+
+// Kurs je Aktie
+const box = document.getElementById("aktien");
+D.aktien.forEach(a => {
+  const s = document.createElement("section");
+  s.className = "panel";
+  s.setAttribute("aria-label", a.name);
+  s.innerHTML = `<div class="kopf"><h2>${a.name}</h2><span class="kurs num">${fmt(a.kurs)} USD</span></div>
+    <div class="zahlen"><div><span class="label">Seit Start</span><span class="gross num ${cls(a.seit_start_pct)}">${sign(a.seit_start_pct)} %</span></div>
+      <div><span class="label">Heute</span><span class="num ${cls(a.tag_pct)}">${sign(a.tag_pct)} %</span></div>
+      <div><span class="label">Start</span><span class="num">${a.start_kurs === null ? "–" : fmt(a.start_kurs)}</span></div></div>
+    <div class="chart"><canvas id="p_${a.id}" aria-label="Kurs ${a.name} in Prozent seit Start"></canvas></div>`;
+  box.appendChild(s);
+});
+
+// Trades
+const t = D.trades.slice(0, 5);
+document.getElementById("trades").innerHTML = t.length
+  ? `<tbody>` + t.map(x => `<tr><td class="num">${x.zeit}</td><td>${x.konto}</td><td>${x.art}</td><td class="num">${fmt(x.kurs)} USD</td></tr>`).join("") + "</tbody>"
+  : `<tbody><tr><td>Noch keine Trades.</td></tr></tbody>`;
+
+// Grafiken
+const charts = [];
+function zeichne() {
+  charts.splice(0).forEach(c => c.destroy());
+  const ink = css("--muted"), grid = css("--grid");
+  D.aktien.forEach(a => charts.push(new Chart(document.getElementById(`p_${a.id}`), {
+    type: "line",
+    data: { labels: a.verlauf_zeit, datasets: [{ label: a.symbol, data: a.verlauf_pct, borderColor: css("--accent"), backgroundColor: css("--accent") }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${sign(c.parsed.y)} % seit Start` } } },
+      scales: {
+        x: { ticks: { color: ink, maxTicksLimit: 3, maxRotation: 0, font: { family: css("--mono"), size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: ink, maxTicksLimit: 4, font: { family: css("--mono"), size: 10 }, callback: v => sign(v, 1) + " %" }, grid: { color: c => c.tick.value === 0 ? css("--muted") : grid }, border: { display: false } }
+      },
+      elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2, tension: 0 } }
+    }
+  })));
+}
+if (window.Chart) {
+  zeichne();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", zeichne);
+  new MutationObserver(zeichne).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+}
+</script>
+</body></html>
